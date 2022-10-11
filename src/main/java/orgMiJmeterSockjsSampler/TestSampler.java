@@ -29,10 +29,10 @@ import org.springframework.web.socket.sockjs.transport.TransportType;
 import javax.net.ssl.TrustManager;
 
 public class TestSampler {
-	
-	private String transport = "xhr-streaming";
-    private String host = "https://xxx.com";
-    private String path = "/xxx/";
+
+	private String transport = "websocket";
+    private String host = "http://localhost:8080";
+    private String path = "/websocket-app";
     private long connectionTime = 500;
     private long responseBufferTime = 10000;
     private String connectionHeadersLogin = "login:xxx";
@@ -41,52 +41,52 @@ public class TestSampler {
     private String connectionHeadersAcceptVersion = "accept-version:1.1,1.0";
     private String connectionHeadersHeartbeat = "heart-beat:0,0";
     private String subscribeHeadersId = "id:sub-0";
-    private String subscribeHeadersDestination = "destination:/exchange/xxx/xxx";
-	
+    private String subscribeHeadersDestination = "destination:/topic/mural";
+
 	public static void main(String[] args)
     {
 		TestSampler test = new TestSampler();
 		ResponseMessage responseMessage = new ResponseMessage();
-		
+
 		try {
 			if (test.transport == "xhr-streaming") {
 				test.createXhrStreamingConnection(responseMessage);
 			} else {
 				test.createWebsocketConnection(responseMessage);
 			}
-			
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     }
-	
+
 	// Websocket test
 	public void createWebsocketConnection(ResponseMessage responseMessage) throws Exception {
 		StandardWebSocketClient simpleWebSocketClient = new StandardWebSocketClient();
-		
+
 		// set up a TrustManager that trusts everything
 		SSLContext sslContext = SSLContext.getInstance("TLS");
 		sslContext.init(null, new TrustManager[] { new BlindTrustManager() }, null);
 		Map<String, Object> userProperties = new HashMap<>();
 		userProperties.put(Constants.SSL_CONTEXT_PROPERTY, sslContext);
 		simpleWebSocketClient.setUserProperties(userProperties);
-			
+
 		List<Transport> transports = new ArrayList<>(1);
      	transports.add(new WebSocketTransport(simpleWebSocketClient));
- 				
+
  		SockJsClient sockJsClient = new SockJsClient(transports);
  		WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
  		stompClient.setMessageConverter(new StringMessageConverter());
- 		
+
  		URI stompUrlEndpoint = new URI(this.host + this.path);
  		StompSessionHandler sessionHandler = new SockJsWebsocketStompSessionHandler(
-			this.getSubscribeHeaders(), 
-			this.connectionTime, 
+			this.getSubscribeHeaders(),
+			this.connectionTime,
 			this.responseBufferTime,
 			responseMessage
 		);
- 		 		
+
  		WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
  		StompHeaders connectHeaders = new StompHeaders();
  		String connectionHeadersString = this.getConnectionsHeaders();
@@ -96,10 +96,10 @@ public class TestSampler {
  			int key = 0;
  			int value = 1;
  			String[] headerParameter = splitHeaders[i].split(":");
- 			
- 			connectHeaders.add(headerParameter[key], headerParameter[value]);			
+
+ 			connectHeaders.add(headerParameter[key], headerParameter[value]);
  		}
- 		
+
  		String startMessage = "\n[Execution Flow]"
  						    + "\n - Opening new connection"
  							+ "\n - Using response message pattern \"a[\"CONNECTED\""
@@ -107,51 +107,53 @@ public class TestSampler {
  							+ "\n - Using disconnect pattern \"\"";
 
  		responseMessage.addMessage(startMessage);
- 		
+
  		System.out.println(startMessage);
  		stompClient.connect(stompUrlEndpoint.toString(), handshakeHeaders, connectHeaders, sessionHandler, new Object[0]);
- 		 	
+
  		// wait some time till killing the stomp connection
  		Thread.sleep(this.connectionTime + this.responseBufferTime);
  		stompClient.stop();
- 		
+
  		String messageVariables = "\n[Variables]"
  								+ "\n" + " - Message count: " + responseMessage.getMessageCounter();
- 		
+
  		responseMessage.addMessage(messageVariables);
- 	
+
  		String messageProblems = "\n[Problems]"
 								+ "\n" + responseMessage.getProblems();
- 		
+
+		System.out.println(messageVariables);
+
  		System.out.println(messageProblems);
 
  		responseMessage.addMessage(messageProblems);
  	}
-	
+
 	// XHR-Streaming test
     public void createXhrStreamingConnection(ResponseMessage responseMessage) throws Exception {
- 	  RestTemplate restTemplate = new RestTemplate();	  
+ 	  RestTemplate restTemplate = new RestTemplate();
  	  RestTemplateXhrTransport transport = new RestTemplateXhrTransport(restTemplate);
  	  transport.setTaskExecutor(new SyncTaskExecutor());
- 	  
+
  	  SockJsUrlInfo urlInfo = new SockJsUrlInfo(new URI(this.host + this.path));
  	  HttpHeaders headers = new HttpHeaders();
  	  SockJsXhrTransportRequest request = new SockJsXhrTransportRequest(
- 		  urlInfo, 
- 		  headers, 
+ 		  urlInfo,
  		  headers,
- 		  transport, 
- 		  TransportType.XHR, 
+ 		  headers,
+ 		  transport,
+ 		  TransportType.XHR,
  		  new Jackson2SockJsMessageCodec()
  	  );
  	  SockJsXhrSessionHandler xhrSessionHandler = new SockJsXhrSessionHandler(
- 		  this.getConnectionsHeaders(), 
- 		  this.getSubscribeHeaders(), 
+ 		  this.getConnectionsHeaders(),
+ 		  this.getSubscribeHeaders(),
  		  this.connectionTime,
 		  this.responseBufferTime,
 		  responseMessage
  	  );
-      
+
  	  String startMessage = "\n[Execution Flow]"
 					     + "\n - Opening new connection"
 						 + "\n - Using response message pattern \"a[\"CONNECTED\""
@@ -159,11 +161,11 @@ public class TestSampler {
 						 + "\n - Using disconnect pattern \"\"";
 
  	  responseMessage.addMessage(startMessage);
- 	  
+
  	  System.out.println(startMessage);
- 	  
+
  	  transport.connect(request, xhrSessionHandler);
- 	 
+
  	  String messageVariables = "\n[Variables]"
  							  + "\n" + " - Message count: " + responseMessage.getMessageCounter();
 
@@ -173,26 +175,28 @@ public class TestSampler {
  						     + "\n" + responseMessage.getProblems();
 
  	  responseMessage.addMessage(messageProblems);
- 	  
+
+ 	  System.out.println(messageVariables);
+
  	  System.out.println(messageProblems);
    }
-	
+
 	private String getSubscribeHeaders() {
     	return String.format(
-			"%s\n%s", 
+			"%s\n%s",
 			this.subscribeHeadersId,
 			this.subscribeHeadersDestination
 		);
     }
-    
+
     private String getConnectionsHeaders() {
     	return String.format(
-			"%s\n%s\n%s\n%s\n%s", 
+			"%s\n%s\n%s\n%s\n%s",
 			this.connectionHeadersLogin,
 			this.connectionHeadersPasscode,
-			this.connectionHeadersHost, 
+			this.connectionHeadersHost,
 			this.connectionHeadersAcceptVersion,
-			this.connectionHeadersHeartbeat			
+			this.connectionHeadersHeartbeat
 		);
     }
 
