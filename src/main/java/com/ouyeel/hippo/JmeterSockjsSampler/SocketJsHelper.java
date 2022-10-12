@@ -1,4 +1,4 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.web.socket.messaging.WebSocketStompClient;

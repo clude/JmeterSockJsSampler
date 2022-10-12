@@ -1,4 +1,4 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 /*
  * Copyright 2002-2017 the original author or authors.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import java.util.ArrayList;
 import java.util.Arrays;

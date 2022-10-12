@@ -1,7 +1,7 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 public class ResponseMessage {
-	
+
 	private String message = "";
 	private long messageCounter = 0;
 	private String problems = "";
@@ -13,7 +13,7 @@ public class ResponseMessage {
 	public void setMessage(String message) {
 		this.message = message;
 	}
-	
+
 	public void addMessage(String message) {
 		this.message = (this.message != "") ? this.message + "\n" + message : message;
 	}
@@ -33,7 +33,7 @@ public class ResponseMessage {
 	public void addProblem(String problem) {
 		this.problems = (this.problems != "") ? this.problems + "\n" + problem : problem;
 	}
-	
+
 	public void setProblems(String problems) {
 		this.problems = problems;
 	}

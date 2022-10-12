@@ -1,4 +1,4 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -17,7 +17,7 @@ public class BlindTrustManager implements X509TrustManager {
 
 	public void checkServerTrusted(X509Certificate[] chain, String authType)
 			throws CertificateException {
-		
+
 
 	}
 }

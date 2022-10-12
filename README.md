@@ -24,7 +24,7 @@ To install this plugin put the jar file into \JMeter\lib\ext folder.
 
 ## Add Sampler
 
-Add a "Java Request" and choose the Classname "orgMiJmeterSockjsSampler.SockJsSampler".  
+Add a "Java Request" and choose the Classname "SockJsSampler".  
 
 ## Configure the SockJsSampler
 

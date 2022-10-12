@@ -1,4 +1,4 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import java.io.Serializable;
 import java.net.URI;
@@ -18,7 +18,6 @@ import org.apache.tomcat.websocket.Constants;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.converter.SimpleMessageConverter;
-import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;

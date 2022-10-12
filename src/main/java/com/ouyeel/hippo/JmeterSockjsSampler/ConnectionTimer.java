@@ -1,4 +1,4 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import java.io.IOException;
 import org.apache.commons.logging.Log;
@@ -6,7 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.web.socket.WebSocketSession;
 
 /**
- * ConnectionTimer will run a timer and after the timer comes to an end 
+ * ConnectionTimer will run a timer and after the timer comes to an end
  * close the Websocket connection
  *
  * @author Frank Mohr
@@ -17,12 +17,12 @@ public class ConnectionTimer implements Runnable {
 	// in milliseconds
     private long totalTime;
 	private WebSocketSession webSocketSession = null;
-	
+
     public ConnectionTimer(WebSocketSession session, long totalTime) {
 		this.webSocketSession = session;
 		this.totalTime = totalTime;
     }
-    
+
     @Override
     public void run() {
 		try {
@@ -31,7 +31,7 @@ public class ConnectionTimer implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		try {
 			webSocketSession.close();
 		} catch (IOException e) {

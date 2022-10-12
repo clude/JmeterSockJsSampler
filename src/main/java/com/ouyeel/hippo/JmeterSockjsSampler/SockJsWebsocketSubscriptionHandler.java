@@ -1,4 +1,4 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;

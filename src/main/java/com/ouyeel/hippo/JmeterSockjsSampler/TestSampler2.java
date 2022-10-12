@@ -1,17 +1,8 @@
-package orgMiJmeterSockjsSampler;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.net.ssl.SSLContext;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
 import org.apache.tomcat.websocket.Constants;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.messaging.converter.SimpleMessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
@@ -19,34 +10,36 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
-import org.springframework.web.socket.sockjs.client.RestTemplateXhrTransport;
-import org.springframework.web.socket.sockjs.client.SockJsClient;
-import org.springframework.web.socket.sockjs.client.SockJsUrlInfo;
-import org.springframework.web.socket.sockjs.client.Transport;
-import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+import org.springframework.web.socket.sockjs.client.*;
 import org.springframework.web.socket.sockjs.frame.Jackson2SockJsMessageCodec;
 import org.springframework.web.socket.sockjs.transport.TransportType;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class TestSampler {
+public class TestSampler2 {
 
-	private String transport = "websocket";
-    private String host = "http://localhost:8080";
-    private String path = "/websocket-app";
+	private String transport = "xhr-streaming";
+    private String host = "https://xxx.com";
+    private String path = "/xxx/";
     private long connectionTime = 500;
-    private long responseBufferTime = 10000;
+    private long responseBufferTime = 60000;
     private String connectionHeadersLogin = "login:xxx";
     private String connectionHeadersPasscode = "passcode:xxx";
     private String connectionHeadersHost = "host:xxx";
     private String connectionHeadersAcceptVersion = "accept-version:1.1,1.0";
     private String connectionHeadersHeartbeat = "heart-beat:0,0";
     private String subscribeHeadersId = "id:sub-0";
-    private String subscribeHeadersDestination = "destination:/topic/mural";
+    private String subscribeHeadersDestination = "destination:/exchange/xxx/xxx";
 
 	public static void main(String[] args)
     {
-		TestSampler test = new TestSampler();
+		TestSampler2 test = new TestSampler2();
 		ResponseMessage responseMessage = new ResponseMessage();
 
 		try {
@@ -78,8 +71,7 @@ public class TestSampler {
 
  		SockJsClient sockJsClient = new SockJsClient(transports);
  		WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
-// 		stompClient.setMessageConverter(new StringMessageConverter());
-		stompClient.setMessageConverter(new SimpleMessageConverter());
+ 		stompClient.setMessageConverter(new StringMessageConverter());
 
  		URI stompUrlEndpoint = new URI(this.host + this.path);
  		StompSessionHandler sessionHandler = new SockJsWebsocketStompSessionHandler(
@@ -124,10 +116,6 @@ public class TestSampler {
 
  		String messageProblems = "\n[Problems]"
 								+ "\n" + responseMessage.getProblems();
-
-		System.out.println(messageVariables);
-
-		System.out.println(responseMessage.getMessage());
 
  		System.out.println(messageProblems);
 
@@ -179,8 +167,6 @@ public class TestSampler {
  						     + "\n" + responseMessage.getProblems();
 
  	  responseMessage.addMessage(messageProblems);
-
- 	  System.out.println(messageVariables);
 
  	  System.out.println(messageProblems);
    }

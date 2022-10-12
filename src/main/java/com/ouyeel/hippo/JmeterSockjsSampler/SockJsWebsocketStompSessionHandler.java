@@ -1,9 +1,5 @@
-package orgMiJmeterSockjsSampler;
+package com.ouyeel.hippo.JmeterSockjsSampler;
 
-import org.apache.log4j.LogManager;
-
-import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
-import org.apache.log4j.Logger;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
