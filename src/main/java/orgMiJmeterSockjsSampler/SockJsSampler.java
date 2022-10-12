@@ -17,9 +17,12 @@ import org.apache.jmeter.samplers.SampleResult;
 import org.apache.tomcat.websocket.Constants;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.messaging.converter.SimpleMessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompHeaders;
+import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
+import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
@@ -31,11 +34,11 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import org.springframework.web.socket.sockjs.frame.Jackson2SockJsMessageCodec;
 import org.springframework.web.socket.sockjs.transport.TransportType;
- 
+
 public class SockJsSampler extends AbstractJavaSamplerClient implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final Jackson2SockJsMessageCodec CODEC = new Jackson2SockJsMessageCodec();
-	
+
 	public static final String DEFAULT_ENCODING = "UTF-8";
 	public static final String TRANSPORT = "transport";
 	public static final String WEBSOCKET_TRANSPORT = "websocket";
@@ -51,17 +54,19 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
 	public static final String CONNECTION_HEADERS_HEARTBEAT = "connectionHeadersHeartbeat";
 	public static final String SUBSCRIBE_HEADERS_ID = "subscribeHeadersId";
 	public static final String SUBSCRIBE_HEADERS_DESTINATION = "subscribeHeadersDestination";
-	
-	
+	public static final String CONNECTION_AUTO_CLOSE = "connectionAutoClose";
+	public static final String HANDSHAKE_HEADERS_COOKIE = "handshakeHeadersCookie";
+
+
 	@Override
     public void setupTest(JavaSamplerContext context){
 		// TODO Auto-generated method stub
 		super.setupTest(context);
     }
-	
+
 	// set up default arguments for the JMeter GUI
     @Override
-    // @TODO: remove Passwords and so on 
+    // @TODO: remove Passwords and so on
     public Arguments getDefaultParameters() {
         Arguments defaultParameters = new Arguments();
         defaultParameters.addArgument(TRANSPORT, XHR_STREAMING_TRANSPORT, "", "Choose a transport-type: 'websocket' or 'xhr-streaming'");
@@ -69,6 +74,8 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
         defaultParameters.addArgument(PATH, "/[xxx]/");
         defaultParameters.addArgument(CONNECTION_TIME, "[30000]");
         defaultParameters.addArgument(RESPONSE_BUFFER_TIME, "[30000]");
+		defaultParameters.addArgument(CONNECTION_AUTO_CLOSE, "true");
+		defaultParameters.addArgument(HANDSHAKE_HEADERS_COOKIE, "Cookie: xxx=xxx");
         defaultParameters.addArgument(CONNECTION_HEADERS_LOGIN, "login:[xxx]");
         defaultParameters.addArgument(CONNECTION_HEADERS_PASSCODE, "passcode:[xxx]");
         defaultParameters.addArgument(CONNECTION_HEADERS_HOST, "host:[xxx]");
@@ -76,18 +83,18 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
         defaultParameters.addArgument(CONNECTION_HEADERS_HEARTBEAT, "heart-beat:0,0");
         defaultParameters.addArgument(SUBSCRIBE_HEADERS_ID, "id:sub-[x]");
         defaultParameters.addArgument(SUBSCRIBE_HEADERS_DESTINATION, "destination:/exchange/[exchange_name]/[queue_name]");
-        
+
         return defaultParameters;
     }
- 
+
     @Override
     public SampleResult runTest(JavaSamplerContext context) {
 		SampleResult sampleResult = new SampleResult();
 		// record the start time of a sample
 		sampleResult.sampleStart();
-		
+
 		ResponseMessage responseMessage = new ResponseMessage();
-         
+
         try {
         	switch (context.getParameter(TRANSPORT)) {
         		case WEBSOCKET_TRANSPORT:
@@ -100,7 +107,7 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
         			this.createWebsocketConnection(context, responseMessage);
     				break;
         	}
-        	
+
         	// Record the end time of a sample and calculate the elapsed time
             sampleResult.sampleEnd();
             sampleResult.setSuccessful(true);
@@ -111,7 +118,7 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
         	sampleResult.sampleEnd();
             sampleResult.setSuccessful(false);
             sampleResult.setResponseMessage(responseMessage.getMessage());
- 
+
             // get stack trace as a String to return as document data
             java.io.StringWriter stringWriter = new java.io.StringWriter();
             e.printStackTrace(new java.io.PrintWriter(stringWriter));
@@ -119,16 +126,16 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
             sampleResult.setDataType(org.apache.jmeter.samplers.SampleResult.TEXT);
             sampleResult.setResponseCode("500");
         }
- 
+
         return sampleResult;
     }
-    
+
     @Override
     public void teardownTest(JavaSamplerContext context) {
         // TODO Auto-generated method stub
     	super.teardownTest(context);
     }
-    
+
     // Websocket test
  	public void createWebsocketConnection(JavaSamplerContext context, ResponseMessage responseMessage) throws Exception {
  		StandardWebSocketClient simpleWebSocketClient = new StandardWebSocketClient();
@@ -138,23 +145,25 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
 		Map<String, Object> userProperties = new HashMap<>();
 		userProperties.put(Constants.SSL_CONTEXT_PROPERTY, sslContext);
 		simpleWebSocketClient.setUserProperties(userProperties);
-			
+
 		List<Transport> transports = new ArrayList<>(1);
      	transports.add(new WebSocketTransport(simpleWebSocketClient));
- 				
+
  		SockJsClient sockJsClient = new SockJsClient(transports);
  		WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
- 		stompClient.setMessageConverter(new StringMessageConverter());
- 		
+ 		// stompClient.setMessageConverter(new StringMessageConverter());
+		stompClient.setMessageConverter(new SimpleMessageConverter());
+
  		URI stompUrlEndpoint = new URI(context.getParameter(HOST) + context.getParameter(PATH));
  		StompSessionHandler sessionHandler = new SockJsWebsocketStompSessionHandler(
-			this.getSubscribeHeaders(context), 
-			context.getLongParameter(CONNECTION_TIME), 
+			this.getSubscribeHeaders(context),
+			context.getLongParameter(CONNECTION_TIME),
 			context.getLongParameter(RESPONSE_BUFFER_TIME),
 			responseMessage
 		);
- 		 		
+
  		WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
+		handshakeHeaders.setAll(this.getHandshakeHeaders(context));
  		StompHeaders connectHeaders = new StompHeaders();
  		String connectionHeadersString = this.getConnectionsHeaders(context);
  		String[] splitHeaders = connectionHeadersString.split("\n");
@@ -163,10 +172,10 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
  			int key = 0;
  			int value = 1;
  			String[] headerParameter = splitHeaders[i].split(":");
- 			
- 			connectHeaders.add(headerParameter[key], headerParameter[value]);			
+
+ 			connectHeaders.add(headerParameter[key], headerParameter[value]);
  		}
- 		
+
  		String startMessage = "\n[Execution Flow]"
  						    + "\n - Opening new connection"
  							+ "\n - Using response message pattern \"a[\"CONNECTED\""
@@ -174,48 +183,54 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
  							+ "\n - Using disconnect pattern \"\"";
 
  		responseMessage.addMessage(startMessage);
- 		
- 		stompClient.connect(stompUrlEndpoint.toString(), handshakeHeaders, connectHeaders, sessionHandler, new Object[0]);
- 		 	
+
+		ListenableFuture<StompSession> stompSession = stompClient.connect(stompUrlEndpoint.toString(), handshakeHeaders, connectHeaders, sessionHandler, new Object[0]);
+
+		String connectionAutoClose = context.getParameter(CONNECTION_AUTO_CLOSE);
+		if("true".equals(connectionAutoClose)) {
+			Thread.sleep(context.getLongParameter(CONNECTION_TIME) + context.getLongParameter(RESPONSE_BUFFER_TIME));
+ 			stompSession.get().disconnect();
+			stompClient.stop();
+		}
  		// wait some time till killing the stomp connection
- 		Thread.sleep(context.getLongParameter(CONNECTION_TIME) + context.getLongParameter(RESPONSE_BUFFER_TIME));
- 		stompClient.stop();
- 		
+		SocketJsHelper.threadLocalCachedConnection.set(stompClient);
+		// SocketJsHelper.threadLocalCachedSession.set(stompSession.get());
+
  		String messageVariables = "\n[Variables]"
  								+ "\n" + " - Message count: " + responseMessage.getMessageCounter();
- 		
+
  		responseMessage.addMessage(messageVariables);
- 	
+
  		String messageProblems = "\n[Problems]"
 								+ "\n" + responseMessage.getProblems();
- 		
+
  		responseMessage.addMessage(messageProblems);
  	}
- 	
+
     // XHR-Streaming test
     public void createXhrStreamingConnection(JavaSamplerContext context, ResponseMessage responseMessage) throws Exception {
- 	  RestTemplate restTemplate = new RestTemplate();	  
+ 	  RestTemplate restTemplate = new RestTemplate();
  	  RestTemplateXhrTransport transport = new RestTemplateXhrTransport(restTemplate);
  	  transport.setTaskExecutor(new SyncTaskExecutor());
- 	  
+
  	  SockJsUrlInfo urlInfo = new SockJsUrlInfo(new URI(context.getParameter(HOST) + context.getParameter(PATH)));
  	  HttpHeaders headers = new HttpHeaders();
  	  SockJsXhrTransportRequest request = new SockJsXhrTransportRequest(
- 		  urlInfo, 
- 		  headers, 
+ 		  urlInfo,
  		  headers,
- 		  transport, 
- 		  TransportType.XHR, 
+ 		  headers,
+ 		  transport,
+ 		  TransportType.XHR,
  		  CODEC
  	  );
  	  SockJsXhrSessionHandler xhrSessionHandler = new SockJsXhrSessionHandler(
- 		  this.getConnectionsHeaders(context), 
- 		  this.getSubscribeHeaders(context), 
+ 		  this.getConnectionsHeaders(context),
+ 		  this.getSubscribeHeaders(context),
  		  context.getLongParameter(CONNECTION_TIME),
 		  context.getLongParameter(RESPONSE_BUFFER_TIME),
 		  responseMessage
  	  );
-      
+
  	  String startMessage = "\n[Execution Flow]"
 					     + "\n - Opening new connection"
 						 + "\n - Using response message pattern \"a[\"CONNECTED\""
@@ -223,10 +238,10 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
 						 + "\n - Using disconnect pattern \"\"";
 
  	  responseMessage.addMessage(startMessage);
- 	  
- 	  
+
+
  	  transport.connect(request, xhrSessionHandler);
- 	 
+
  	  String messageVariables = "\n[Variables]"
  							  + "\n" + " - Message count: " + responseMessage.getMessageCounter();
 
@@ -237,26 +252,38 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
 
  	  responseMessage.addMessage(messageProblems);
    }
-    
+
+   private Map<String, String> getHandshakeHeaders(JavaSamplerContext context) {
+		Map<String, String> headers = new HashMap<>();
+
+		String cookeHeader = context.getParameter(HANDSHAKE_HEADERS_COOKIE);
+		String[] cookieArr = cookeHeader.split(":");
+		if(cookieArr.length > 1) {
+			headers.put(cookieArr[0].trim(), cookieArr[1].trim());
+		}
+
+		return headers;
+   }
+
     private String getSubscribeHeaders(JavaSamplerContext context) {
     	return String.format(
-			"%s\n%s", 
+			"%s\n%s",
 			context.getParameter(SUBSCRIBE_HEADERS_ID),
 			context.getParameter(SUBSCRIBE_HEADERS_DESTINATION)
 		);
     }
-    
+
     private String getConnectionsHeaders(JavaSamplerContext context) {
     	return String.format(
-			"%s\n%s\n%s\n%s\n%s", 
+			"%s\n%s\n%s\n%s\n%s",
 			context.getParameter(CONNECTION_HEADERS_LOGIN),
 			context.getParameter(CONNECTION_HEADERS_PASSCODE),
-			context.getParameter(CONNECTION_HEADERS_HOST), 
+			context.getParameter(CONNECTION_HEADERS_HOST),
 			context.getParameter(CONNECTION_HEADERS_ACCEPT_VERSION),
-			context.getParameter(CONNECTION_HEADERS_HEARTBEAT)			
+			context.getParameter(CONNECTION_HEADERS_HEARTBEAT)
 		);
     }
-    
+
 //	public void createEventsourceConnection(JavaSamplerContext context, ResponseMessage responseMessage) throws Exception {
 //	Executor executor = Executors.newSingleThreadExecutor();
 //	long reconnectionTimeMillis = 100;
@@ -277,7 +304,7 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
 //		public void onDisconnect() {
 //			System.out.println("Disconnected!!!!!!");
 //			// TODO Auto-generated method stub
-//			
+//
 //		}
 //
 //		@Override
@@ -285,14 +312,14 @@ public class SockJsSampler extends AbstractJavaSamplerClient implements Serializ
 //			System.out.println("onMessage!!!!!!");
 //			// TODO Auto-generated method stub
 //		}
-//    };		
-//    
+//    };
+//
 //	EventSource eventSource = new EventSource(
-//		executor, 
-//		reconnectionTimeMillis, 
-//		host, 
+//		executor,
+//		reconnectionTimeMillis,
+//		host,
 //		eventClientSourceHandler
 //	);
 //    eventSource.connect();
-//} 
+//}
 }

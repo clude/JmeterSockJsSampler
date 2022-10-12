@@ -1,5 +1,9 @@
 package orgMiJmeterSockjsSampler;
 
+import org.apache.log4j.LogManager;
+
+import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
+import org.apache.log4j.Logger;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
@@ -12,43 +16,46 @@ public class SockJsWebsocketStompSessionHandler extends StompSessionHandlerAdapt
 	private long responseBufferTime;
 	private String messageStorage = "";
 	private ResponseMessage responseMessage;
-		
+
 	public SockJsWebsocketStompSessionHandler(String subscribeHeaders, long connectionTime, long responseBufferTime, ResponseMessage responseMessage) {
 		this.subscribeHeaders = subscribeHeaders;
 		this.connectionTime = connectionTime;
 		this.responseBufferTime = responseBufferTime;
 		this.responseMessage = responseMessage;
 	}
-	
+
 	public String getMessageStorage() {
 		return this.messageStorage;
 	}
-	
+
 	@Override
 	public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
+		// log.debug(String.format("Session connected, sessionid is %s, connectionHeaders is %s", session.getSessionId(), connectedHeaders.toString()));
 		String connectionMessage = "Session id: " + session.getSessionId()
 								 + "\n - Waiting for the server connection for " + this.connectionTime + " MILLISECONDS"
 								 + "\n - WebSocket connection has been opened"
 								 + "\n - Connection established";
 
-		this.responseMessage.addMessage(connectionMessage);	
-		
+		this.responseMessage.addMessage(connectionMessage);
+
 	    this.subscribeTo(session);
 	}
-	
+
 	@Override
 	public void handleException(
-		StompSession session, 
-		StompCommand command, 
+		StompSession session,
+		StompCommand command,
 		StompHeaders headers,
-		byte[] payload, 
+		byte[] payload,
 		Throwable exception
 	) {
+		// log.error("Session created with exception", exception);
+
 		String exceptionMessage = " - Received exception: " + exception.getMessage();
-		
+
 		this.responseMessage.addProblem(exceptionMessage);
 	}
-	
+
 	/**
 	 * This implementation is empty.
 	 */
@@ -65,11 +72,13 @@ public class SockJsWebsocketStompSessionHandler extends StompSessionHandlerAdapt
 	 */
 	@Override
 	public void handleTransportError(StompSession session, Throwable exception) {
+		// log.error("Session created with handleTransportError", exception);
+
 		String exceptionMessage = " - Received exception: " + exception.getMessage();
-		
+
 		this.responseMessage.addProblem(exceptionMessage);
 	}
-	
+
 	private void subscribeTo(StompSession session)
 	{
 		StompHeaders headers = new StompHeaders();
@@ -78,9 +87,9 @@ public class SockJsWebsocketStompSessionHandler extends StompSessionHandlerAdapt
 			int key = 0;
 			int value = 1;
 			String[] headerParameter = splitHeaders[i].split(":");
-			headers.add(headerParameter[key], headerParameter[value]);			
+			headers.add(headerParameter[key], headerParameter[value]);
 		}
-	    
+
 	    session.subscribe(headers, new SockJsWebsocketSubscriptionHandler(this.responseMessage, this.responseBufferTime));
 	}
 }

@@ -1,52 +1,57 @@
 package orgMiJmeterSockjsSampler;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.net.ssl.SSLContext;
-
+import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
 import org.apache.tomcat.websocket.Constants;
+import org.springframework.core.task.AsyncListenableTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.converter.SimpleMessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompHeaders;
+import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
-import org.springframework.web.socket.sockjs.client.RestTemplateXhrTransport;
-import org.springframework.web.socket.sockjs.client.SockJsClient;
-import org.springframework.web.socket.sockjs.client.SockJsUrlInfo;
-import org.springframework.web.socket.sockjs.client.Transport;
-import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+import org.springframework.web.socket.sockjs.client.*;
 import org.springframework.web.socket.sockjs.frame.Jackson2SockJsMessageCodec;
 import org.springframework.web.socket.sockjs.transport.TransportType;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
-public class TestSampler {
+import static orgMiJmeterSockjsSampler.SockJsSampler.HANDSHAKE_HEADERS_COOKIE;
+
+public class TestSamplerOuyeel {
 
 	private String transport = "websocket";
-    private String host = "http://localhost:8080";
-    private String path = "/websocket-app";
-    private long connectionTime = 500;
-    private long responseBufferTime = 10000;
-    private String connectionHeadersLogin = "login:xxx";
+    private String host = "https://ouyeel.liveall.cn";
+    private String path = "/olive-chat/chat/ws";
+    private long connectionTime = 5000;
+    private long responseBufferTime = 30000;
+    private String connectionHeadersLogin = "roomId:947";
     private String connectionHeadersPasscode = "passcode:xxx";
     private String connectionHeadersHost = "host:xxx";
     private String connectionHeadersAcceptVersion = "accept-version:1.1,1.0";
     private String connectionHeadersHeartbeat = "heart-beat:0,0";
     private String subscribeHeadersId = "id:sub-0";
-    private String subscribeHeadersDestination = "destination:/topic/mural";
+    private String subscribeHeadersDestination = "destination:/topic/chat.room.947";
+    private String connectionHeadersCookie= "Cookie: JSESSIONID=43d23278-3808-4410-b273-cb7a445d9af6";
 
 	public static void main(String[] args)
     {
-		TestSampler test = new TestSampler();
+		TestSamplerOuyeel test = new TestSamplerOuyeel();
 		ResponseMessage responseMessage = new ResponseMessage();
 
 		try {
@@ -80,6 +85,11 @@ public class TestSampler {
  		WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
 // 		stompClient.setMessageConverter(new StringMessageConverter());
 		stompClient.setMessageConverter(new SimpleMessageConverter());
+ 		sockJsClient.setHttpHeaderNames();
+
+//		ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
+//		taskScheduler.afterPropertiesSet();
+// 		stompClient.setTaskScheduler(taskScheduler);
 
  		URI stompUrlEndpoint = new URI(this.host + this.path);
  		StompSessionHandler sessionHandler = new SockJsWebsocketStompSessionHandler(
@@ -90,6 +100,8 @@ public class TestSampler {
 		);
 
  		WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
+ 		handshakeHeaders.setAll(this.getHandshakeHeaders());
+// 		handshakeHeaders.set("Cookie", "JSESSIONID=43d23278-3808-4410-b273-cb7a445d9af6");
  		StompHeaders connectHeaders = new StompHeaders();
  		String connectionHeadersString = this.getConnectionsHeaders();
  		String[] splitHeaders = connectionHeadersString.split("\n");
@@ -111,10 +123,11 @@ public class TestSampler {
  		responseMessage.addMessage(startMessage);
 
  		System.out.println(startMessage);
- 		stompClient.connect(stompUrlEndpoint.toString(), handshakeHeaders, connectHeaders, sessionHandler, new Object[0]);
+		ListenableFuture<StompSession> stompSession = stompClient.connect(stompUrlEndpoint.toString(), handshakeHeaders, connectHeaders, sessionHandler, new Object[0]);
 
  		// wait some time till killing the stomp connection
  		Thread.sleep(this.connectionTime + this.responseBufferTime);
+ 		stompSession.get().disconnect();
  		stompClient.stop();
 
  		String messageVariables = "\n[Variables]"
@@ -182,8 +195,22 @@ public class TestSampler {
 
  	  System.out.println(messageVariables);
 
+ 	  System.out.println(responseMessage.getMessage());
+
  	  System.out.println(messageProblems);
    }
+
+	private Map<String, String> getHandshakeHeaders() {
+		Map<String, String> headers = new HashMap<>();
+
+		String cookeHeader = connectionHeadersCookie;
+		String[] cookieArr = cookeHeader.split(":");
+		if(cookieArr.length > 1) {
+			headers.put(cookieArr[0].trim(), cookieArr[1].trim());
+		}
+
+		return headers;
+	}
 
 	private String getSubscribeHeaders() {
     	return String.format(
